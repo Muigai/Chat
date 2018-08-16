@@ -124,6 +124,7 @@ var __rest = (this && this.__rest) || function (s, e) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const factory_1 = __webpack_require__(/*! ./factory */ "./node_modules/rahisi/dist/factory.js");
 const index_1 = __webpack_require__(/*! ./index */ "./node_modules/rahisi/dist/index.js");
+// add custom parameters checkChanged etc.
 exports.CheckBox = (props) => {
     const { onCheckChanged } = props, rest = __rest(props, ["onCheckChanged"]);
     const attributes = factory_1.React.getAttributes(rest);
@@ -133,8 +134,27 @@ exports.CheckBox = (props) => {
     attributes.push(new index_1.NativeAttribute("type", "checkbox"));
     return new index_1.BaseElement("input", attributes);
 };
-exports.TextBox = (props) => factory_1.React.createElement("input", Object.assign({}, props, { type: "text" }));
-exports.textVal = (e) => e.currentTarget.value;
+exports.TextBox = (props) => {
+    const { onTextChanged } = props, rest = __rest(props, ["onTextChanged"]);
+    const attributes = factory_1.React.getAttributes(rest);
+    if (onTextChanged) {
+        const handler = (() => {
+            let val = "";
+            const onKeyUp = (e) => {
+                if (e.currentTarget.value === val) {
+                    return;
+                }
+                val = e.currentTarget.value;
+                onTextChanged(val);
+            };
+            return onKeyUp;
+        })();
+        attributes.push(new index_1.OnHandlerA("keyup", handler));
+    }
+    attributes.push(new index_1.NativeAttribute("type", "text"));
+    return new index_1.BaseElement("input", attributes);
+};
+// export const textVal = (e: R.KeyboardEvent<HTMLInputElement>) => e.currentTarget.value;
 exports.doScroll = (o, element, to, duration) => {
     const start = element.scrollTop;
     const change = (to || o.offsetTop - 10) - start;
@@ -221,6 +241,8 @@ React.getChildren = (children) => {
     return kids;
 };
 React.appendChild = (kids, child) => {
+    // <>{condition && <a>Display when condition is true</a>}</>
+    // if condition is false, the child is a boolean, but we don't want to display anything
     if (typeof child === "undefined" || typeof child === "boolean" || child === null) {
         return;
     }
@@ -239,13 +261,7 @@ React.appendChild = (kids, child) => {
         kids.push(child);
     }
     else if (typeof child === "function") {
-        const test = child();
-        if (typeof test === "function") {
-            kids.push(new index_1.ConditionalRenderElement(child));
-        }
-        else {
-            kids.push(new index_1.TextElement(child));
-        }
+        kids.push(new index_1.TextElement(child));
     }
     else {
         kids.push(new index_1.TextElement(String(child)));
@@ -287,7 +303,7 @@ __export(__webpack_require__(/*! ./factory */ "./node_modules/rahisi/dist/factor
 
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createRef = (() => {
-    let id = 0;
+    let id = 0; // possible collision
     return () => `id_${id++}`;
 })();
 exports.mounted = "mounted";
@@ -329,7 +345,9 @@ class VersionedList {
     constructor(items = new Array()) {
         this.items = items;
         this.nextKey = 0;
+        // tslint:disable-next-line:no-empty
         this.addListener = () => { };
+        // tslint:disable-next-line:no-empty
         this.removeListener = () => { };
     }
     getItems() {
@@ -390,6 +408,7 @@ class BaseElement {
         this.attributes = attributes;
         this.children = children;
     }
+    // factor out
     mount(parent) {
         const notifier = new Notifier();
         const v = this.render(parent, notifier, false);
@@ -398,7 +417,7 @@ class BaseElement {
     }
     render(parent, watch, isSvg) {
         const useSvg = isSvg || this.elementName === "svg";
-        if (this.elementName == null) {
+        if (this.elementName == null) { // it's a fragment
             const view = document.createDocumentFragment();
             this.children.forEach((a) => a.render(view, watch, useSvg));
             parent.appendChild(view);
@@ -414,10 +433,12 @@ class BaseElement {
 }
 exports.BaseElement = BaseElement;
 class ConditionalRenderElement {
-    constructor(source) {
+    constructor(source, def) {
         this.source = source;
+        this.def = def;
         this.currentNode = document.createTextNode("");
-        this.currentSource = () => { throw new Error("undefined"); };
+        this.fallback = { test: () => true, renderable: def };
+        this.currentSource = source.find((a) => a.test()) || this.fallback;
     }
     mount(parent) {
         const notifier = new Notifier();
@@ -426,18 +447,22 @@ class ConditionalRenderElement {
         return v;
     }
     render(parent, watch, isSvg) {
-        this.currentSource = this.source();
-        this.currentNode = this.currentSource().render(parent, watch, isSvg);
+        this.currentNode =
+            this.currentSource
+                .renderable()
+                .render(parent, watch, isSvg);
         const gen = this.source;
         watch.subscribe(() => {
-            const s = gen();
+            const s = gen.find((a) => a.test());
             if (this.currentSource !== s) {
-                this.currentSource = s;
-                const replacement = this.currentSource().render(document.createDocumentFragment(), watch, isSvg);
+                this.currentSource = s || this.fallback;
+                const replacement = this.currentSource
+                    .renderable()
+                    .render(document.createDocumentFragment(), watch, isSvg);
                 parent.replaceChild(replacement, this.currentNode);
+                this.currentNode = replacement;
             }
         }, parent);
-        parent.appendChild(this.currentNode);
         return this.currentNode;
     }
 }
@@ -543,6 +568,7 @@ class TextElement {
     }
 }
 exports.TextElement = TextElement;
+// xss via href
 class NativeAttribute {
     constructor(attribute, value) {
         this.attribute = attribute;
@@ -597,6 +623,7 @@ NativeAttribute.setAttribute = (attribute, element, value, isSvg) => {
     }
 };
 exports.NativeAttribute = NativeAttribute;
+// lose focus when body is clicked
 class FocusA {
     constructor(focus) {
         this.focus = focus;
@@ -640,7 +667,7 @@ class OnHandlerA {
 exports.OnHandlerA = OnHandlerA;
 exports.Template = (props) => {
     const { source, template, placeholder } = props;
-    return new TemplateElement(source, template, placeholder || null);
+    return new TemplateElement(source, template, placeholder || null); // no props
 };
 //# sourceMappingURL=index.js.map
 
@@ -782,7 +809,6 @@ exports.main = () => {
         }, 1500, () => !isLoggedOn());
     });
     const submitOnEnter = (e) => __awaiter(this, void 0, void 0, function* () {
-        messageContent = rahisi_1.textVal(e);
         if (e.keyCode !== rahisi_type_utils_1.ENTER_KEY) {
             return;
         }
@@ -833,7 +859,7 @@ exports.main = () => {
                 rahisi_1.React.createElement("div", { className: "spa-chat-msg-log" },
                     rahisi_1.React.createElement(rahisi_3.Template, { source: messages, template: messageTemplate })),
                 rahisi_1.React.createElement("div", { className: "spa-chat-msg-in" },
-                    rahisi_1.React.createElement(rahisi_2.TextBox, { disabled: () => chatee === anonUser, onKeyUp: (s) => submitOnEnter(s), value: () => messageContent, focus: () => true }),
+                    rahisi_1.React.createElement(rahisi_2.TextBox, { disabled: () => chatee === anonUser, onTextChanged: (s) => messageContent = s, onKeyUp: (s) => submitOnEnter(s), value: () => messageContent, focus: () => true }),
                     rahisi_1.React.createElement("div", { className: () => "spa-chat-msg-send " + (sendingMessage ? selectedClass : ""), onClick: submitMessage }, "send")))));
     const mainContainer = rahisi_1.React.createElement("div", { className: "spa" },
         rahisi_1.React.createElement("div", { className: "spa-shell-head" },

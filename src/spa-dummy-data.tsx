@@ -1,4 +1,4 @@
-import { React, textVal } from "rahisi";
+import { React } from "rahisi";
 import {R} from "rahisi";
 
 type SyntheticEvent<T = Element> = R.SyntheticEvent<T>;
@@ -210,8 +210,6 @@ export const main: A0 =
         const submitOnEnter =
             async (e: KeyboardEvent<HTMLInputElement>) => {
 
-                messageContent = textVal(e);
-
                 if (e.keyCode !== ENTER_KEY) {
                     return;
                 }
@@ -303,6 +301,7 @@ export const main: A0 =
                         <div className="spa-chat-msg-in" >
                             <TextBox
                                 disabled={() => chatee === anonUser}
+                                onTextChanged={(s) => messageContent = s}
                                 onKeyUp={(s) => submitOnEnter(s)}
                                 value={() => messageContent}
                                 focus={() => true} />
