@@ -1,5 +1,6 @@
 import { React } from "rahisi";
-import {R} from "rahisi";
+import { R } from "rahisi";
+import { A1, F0 } from "rahisi-type-utils";
 
 type SyntheticEvent<T = Element> = R.SyntheticEvent<T>;
 type KeyboardEvent<T = Element> = R.KeyboardEvent<T>;
@@ -43,6 +44,61 @@ interface MessageFrom {
 }
 
 type Message = ChatStarted | MessageTo | MessageFrom;
+
+const selectedClass = "spa-x-select";
+
+const placeholderTemplate = (
+    <div className="spa-chat-list-note">
+        "To chat alone is the fate of all great souls..."
+        <br />
+        <br />
+        "No one is online"
+    </div>);
+
+const userTemplate = (props: { user: User, chatee: F0<User>, startChat: A1<User> }) =>
+    <div className={() => "spa-chat-list-name " + (props.chatee() === props.user ? selectedClass : "")}
+        onClick={() => props.startChat(props.user)}>
+        {props.user.name}
+    </div>;
+
+const messageTemplate =
+    (props: { m: Message, currentUser: F0<User> }) => {
+
+        const [style, content] =
+            (() => {
+                switch (props.m.kind) {
+                    case "from":
+                        return ["spa-chat-msg-log-msg", `${props.m.from.name}: ${props.m.content}`];
+                    case "to":
+                        return ["spa-chat-msg-log-me", `${props.currentUser().name}: ${props.m.content}`];
+                    case "started":
+                        return ["spa-chat-msg-log-alert", `Now chatting with ${props.m.with.name}`];
+                }
+            })();
+
+        const onmounted =
+            (e: SyntheticEvent<HTMLElement>) => doScroll(e.currentTarget, e.currentTarget.parentElement!);
+
+        return <div className={style} onMounted={onmounted}>{content}</div>;
+    };
+
+const mainContainer = (props: {currentUser: F0<User>, isLogonPending: F0<boolean>, processUser: A0}) => (
+    <div className="spa">
+        <div className="spa-shell-head">
+            <div className="spa-shell-head-logo">
+                <h1>SPA</h1>
+                <p>typescript end to end</p>
+            </div>
+            <div className="spa-shell-head-acct" onClick={props.processUser}>
+                {() => props.isLogonPending() ? "... processing ..." : props.currentUser.name}
+            </div>
+        </div>
+        <div className="spa-shell-main">
+            <div className="spa-shell-main-nav" > </div >
+            <div className="spa-shell-main-content"></div>
+        </div >
+        <div className="spa-shell-foot"></div>
+    </div>);
 
 export const main: A0 =
     () => {
@@ -217,14 +273,6 @@ export const main: A0 =
                 await submitMessage();
             };
 
-        const placeholderTemplate =
-            <div className="spa-chat-list-note">
-                "To chat alone is the fate of all great souls..."
-                <br />
-                <br />
-                "No one is online"
-            </div>;
-
         const startChat =
             (user: User) => {
                 chatee = user;
@@ -235,36 +283,6 @@ export const main: A0 =
                 };
 
                 messages.add(message);
-            };
-
-        const selectedClass = "spa-x-select";
-
-        const userTemplate = (user: User) =>
-            <div className={() => "spa-chat-list-name " + (chatee === user ? selectedClass : "")}
-                onClick={() => startChat(user)}>
-                {user.name}
-            </div>;
-
-        const messageTemplate =
-            (m: Message) => {
-
-                const [style, content] =
-                    (() => {
-                        switch (m.kind) {
-                            case "from":
-                                return ["spa-chat-msg-log-msg", `${m.from.name}: ${m.content}`];
-                            case "to":
-                                return ["spa-chat-msg-log-me", `${currentUser.name}: ${m.content}`];
-                            case "started":
-                                return ["spa-chat-msg-log-alert", `Now chatting with ${m.with.name}`];
-                        }
-                    })();
-
-                const onmounted =
-                    (e: SyntheticEvent<HTMLElement>) => doScroll(e.currentTarget,
-                                                                 e.currentTarget.parentElement!);
-
-                return <div className={style} onMounted={onmounted}>{content}</div>;
             };
 
         const animateOpen = "spa-chat spa-chat-animate-open";
@@ -291,12 +309,21 @@ export const main: A0 =
                 <div className={() => isChatActive() ? "spa-chat-sizer" : "hidden"}>
                     <div className="spa-chat-list">
                         <div className="spa-chat-list-box">
-                            <Template source={users} template={userTemplate} placeholder={placeholderTemplate}/>
+                            <Template source={users}
+                                template={(u) => userTemplate({
+                                    user: u,
+                                    chatee: () => chatee,
+                                    startChat: (a) => startChat(a),
+                                })}
+                                placeholder={placeholderTemplate} />
                         </div>
                     </div>
                     <div className="spa-chat-msg">
                         <div className="spa-chat-msg-log">
-                            <Template source={messages} template={messageTemplate}/>
+                            <Template source={messages} template={(u) => messageTemplate({
+                                m: u,
+                                currentUser: () => currentUser,
+                            })} />
                         </div>
                         <div className="spa-chat-msg-in" >
                             <TextBox
@@ -313,25 +340,9 @@ export const main: A0 =
                 </div>
             </div>;
 
-        const mainContainer =
-            <div className="spa">
-                <div className="spa-shell-head">
-                    <div className="spa-shell-head-logo">
-                        <h1>SPA</h1>
-                        <p>typescript end to end</p>
-                    </div>
-                    <div className="spa-shell-head-acct" onClick={processUser}>
-                        {() => isLogonPending ? "... processing ..." : currentUser.name}
-                    </div>
-                </div>
-                <div className="spa-shell-main">
-                    <div className="spa-shell-main-nav" > </div >
-                    <div className="spa-shell-main-content"></div>
-                </div >
-                <div className="spa-shell-foot"></div>
-            </div>;
-
-        mainContainer.mount(document.body);
+        mainContainer({currentUser: () => currentUser,
+                       isLogonPending: () => isLogonPending,
+                       processUser: () => processUser()}).mount(document.body);
 
         chatContainer.mount(document.body);
     };
