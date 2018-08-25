@@ -2,9 +2,6 @@ import { React } from "rahisi";
 import { R } from "rahisi";
 import { A1, F0 } from "rahisi-type-utils";
 
-type SyntheticEvent<T = Element> = R.SyntheticEvent<T>;
-type KeyboardEvent<T = Element> = R.KeyboardEvent<T>;
-
 import { doScroll, TextBox } from "rahisi";
 import {
     Template,
@@ -77,7 +74,7 @@ const messageTemplate =
             })();
 
         const onmounted =
-            (e: SyntheticEvent<HTMLElement>) => doScroll(e.currentTarget, e.currentTarget.parentElement!);
+            (e: R.RealEvent<HTMLElement>) => doScroll(e.currentTarget, e.currentTarget.parentElement!);
 
         return <div className={style} onMounted={onmounted}>{content}</div>;
     };
@@ -264,7 +261,7 @@ export const main: A0 =
             };
 
         const submitOnEnter =
-            async (e: KeyboardEvent<HTMLInputElement>) => {
+            async (e: R.KeyboardEvent<HTMLInputElement>) => {
 
                 if (e.keyCode !== ENTER_KEY) {
                     return;
