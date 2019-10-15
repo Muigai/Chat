@@ -150,13 +150,11 @@ export const main: A0 =
 
                 const userName = prompt("Please sign-in");
 
-                if (!notNullOrWhiteSpace(userName)) {
-                    return;
+                if (notNullOrWhiteSpace(userName)) {
+                    await logon(userName);
+
+                    simulateDataFeed();
                 }
-
-                await logon(userName);
-
-                simulateDataFeed();
             };
 
         let sendingMessage = false;
