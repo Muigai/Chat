@@ -1,7 +1,7 @@
 {
-  "name": "temperature",
+  "name": "chat",
   "version": "1.0.0",
-  "description": "Temperature sample app using rahisi.",
+  "description": "chat sample app using rahisi.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack"
