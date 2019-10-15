@@ -18,11 +18,6 @@
 
         /* Source Map Options */
         "sourceMap": true,
-
-        /* webpack */
-        "esModuleInterop": true,
-        "allowSyntheticDefaultImports": true
-        
     },
      "files": [
         "src/spa-dummy-data.tsx"
