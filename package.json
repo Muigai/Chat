@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "chat sample app using rahisi.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Muigai Mwaura",
   "license": "ISC",
